@@ -1,130 +1,55 @@
-name: Auto Release Notes
+name: Semantic Release
 
 on:
   push:
-    tags:
-      - 'v*.*.*'
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Tag to create release for'
-        required: true
-        default: 'v0.1.0'
+    branches:
+      - main
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
   release:
-    name: Create Release with Auto-generated Notes
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: read
+    concurrency: release
+
     steps:
-      - name: Check out code
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get previous tag
-        id: previoustag
-        run: |
-          PREV_TAG=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed -n '2p')
-          if [ -z "$PREV_TAG" ]; then
-            PREV_TAG=$(git rev-list --max-parents=0 HEAD)
-          fi
-          echo "tag=$PREV_TAG" >> $GITHUB_OUTPUT
-
-      - name: Generate changelog
-        id: changelog
-        run: |
-          CURRENT_TAG="${{ github.ref_name }}"
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            CURRENT_TAG="${{ github.event.inputs.tag }}"
-          fi
-          PREV_TAG="${{ steps.previoustag.outputs.tag }}"
-
-          echo "## 🎉 What's Changed" > CHANGELOG.md
-          echo "" >> CHANGELOG.md
-
-          # Features
-          echo "### ✨ Features" >> CHANGELOG.md
-          git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --grep="^feat" --grep="^feature" -i >> CHANGELOG.md || echo "- No new features" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-
-          # Bug Fixes
-          echo "### 🐛 Bug Fixes" >> CHANGELOG.md
-          git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --grep="^fix" -i >> CHANGELOG.md || echo "- No bug fixes" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-
-          # Documentation
-          echo "### 📝 Documentation" >> CHANGELOG.md
-          git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --grep="^docs" -i >> CHANGELOG.md || echo "- No documentation changes" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-
-          # Performance
-          echo "### ⚡ Performance" >> CHANGELOG.md
-          git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --grep="^perf" -i >> CHANGELOG.md || echo "- No performance improvements" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-
-          # Refactoring
-          echo "### ♻️ Refactoring" >> CHANGELOG.md
-          git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --grep="^refactor" -i >> CHANGELOG.md || echo "- No refactoring changes" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-
-          # CI/CD
-          echo "### 🚀 CI/CD" >> CHANGELOG.md
-          git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --grep="^ci" --grep="^build" -i >> CHANGELOG.md || echo "- No CI/CD changes" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-
-          # Breaking Changes
-          echo "### 💥 Breaking Changes" >> CHANGELOG.md
-          git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --grep="BREAKING CHANGE" -i >> CHANGELOG.md || echo "- No breaking changes" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-
-          # Contributors
-          echo "### 👥 Contributors" >> CHANGELOG.md
-          git log ${PREV_TAG}..HEAD --pretty=format:"- @%an" | sort -u >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          echo "" >> CHANGELOG.md
-
-          # Full Changelog
-          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${CURRENT_TAG}" >> CHANGELOG.md
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
-          name: Release ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
-          body_path: CHANGELOG.md
-          draft: false
-          prerelease: false
-          generate_release_notes: true
+          python-version: '3.9'
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Install dependencies
+        run: |
+          poetry install --with dev --no-root
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run Semantic Release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Update CHANGELOG file
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ -f "CHANGELOG.md" ]; then
-            cat CHANGELOG.md > temp_changelog.md
-            echo "" >> temp_changelog.md
-            echo "---" >> temp_changelog.md
-            echo "" >> temp_changelog.md
-            if [ -f "CHANGELOG.md.bak" ]; then
-              cat CHANGELOG.md.bak >> temp_changelog.md
-            fi
-            mv temp_changelog.md CHANGELOG.md
-          fi
+          poetry run semantic-release version
+          poetry run semantic-release publish
 
-      - name: Commit updated CHANGELOG
+      - name: Push changes
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add CHANGELOG.md || true
-          git commit -m "docs: update CHANGELOG for ${{ github.ref_name }}" || true
-          git push origin HEAD:main || true
+          git push --follow-tags origin main
