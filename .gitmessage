@@ -1,0 +1,66 @@
+# Commit Message Template
+#
+# Format: <type>(<scope>): <subject>
+#
+# <body>
+#
+# <footer>
+#
+# ──────────────────────────────────────────────────────────────────
+# Types:
+#   feat:     A new feature
+#   fix:      A bug fix
+#   docs:     Documentation only changes
+#   style:    Changes that don't affect code meaning (white-space, formatting)
+#   refactor: Code change that neither fixes a bug nor adds a feature
+#   perf:     Performance improvements
+#   test:     Adding missing tests or correcting existing tests
+#   build:    Changes to build system or external dependencies
+#   ci:       Changes to CI configuration files and scripts
+#   chore:    Other changes that don't modify src or test files
+#   revert:   Reverts a previous commit
+#
+# ──────────────────────────────────────────────────────────────────
+# Scope (optional):
+#   auth, api, database, ui, tests, etc.
+#
+# ──────────────────────────────────────────────────────────────────
+# Subject:
+#   - Use imperative mood ("add" not "added" or "adds")
+#   - Don't capitalize first letter
+#   - No period at the end
+#   - Limit to 50 characters
+#
+# ──────────────────────────────────────────────────────────────────
+# Body (optional):
+#   - Wrap at 72 characters
+#   - Explain what and why vs. how
+#   - Can include multiple paragraphs
+#
+# ──────────────────────────────────────────────────────────────────
+# Footer (optional):
+#   - Reference issues: Fixes #123, Closes #456, Refs #789
+#   - Breaking changes: BREAKING CHANGE: description
+#
+# ──────────────────────────────────────────────────────────────────
+# Examples:
+#
+#   feat(auth): add JWT token refresh endpoint
+#
+#   fix(database): resolve connection pool exhaustion
+#
+#   The connection pool was not being properly released after queries,
+#   leading to connection exhaustion under load.
+#
+#   Fixes #123
+#
+# ──────────────────────────────────────────────────────────────────
+#   docs: update API documentation for v2 endpoints
+#
+# ──────────────────────────────────────────────────────────────────
+#   refactor(middleware): simplify error handling logic
+#
+#   BREAKING CHANGE: Error response format has changed from
+#   { error: "msg" } to { message: "msg", code: "ERR_CODE" }
+#
+# ──────────────────────────────────────────────────────────────────
